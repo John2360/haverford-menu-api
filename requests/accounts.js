@@ -26,11 +26,11 @@ exports.getNotifications = (request, response) => {
 
         if (doc.data().hasOwnProperty('active')){
             const status = {"status": doc.data().active};
+            return response.json(status);
         } else {
             const status = {"status": null};
+            return response.json(status);
         }
-
-        return response.json(status);
     }
 
     asyncWrapper(uid);
