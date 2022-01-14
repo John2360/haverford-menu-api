@@ -31,8 +31,8 @@ async function getActiveTokens() {
 
         if (item.data().active == true) {
 
-            if (item.data()?.expoToken != null) {
-                tokens.push(item.data()?.expoToken);
+            if (item.data().hasOwnProperty(expoToken)) {
+                tokens.push(item.data().expoToken);
             }
 
         }
