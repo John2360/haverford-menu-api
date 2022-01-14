@@ -24,7 +24,11 @@ exports.getNotifications = (request, response) => {
         const docRef = db.collection("notification-tokens").doc(uid);
         const doc = await docRef.get();
 
-        const status = {"status": doc.data()?.active};
+        if (doc.data().hasOwnProperty('active')){
+            const status = {"status": doc.data().active};
+        } else {
+            const status = {"status": null};
+        }
 
         return response.json(status);
     }
