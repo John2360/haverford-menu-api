@@ -71,7 +71,7 @@ exports.getDaysMenus = (request, response) => {
 
         var options = {
             'method': 'GET',
-            'url': 'https://www.googleapis.com/calendar/v3/calendars/hc.dining@gmail.com/events?key=+'+process.env.calKey+'+&timeMin='+today_str+'T06:00:00-05:00&timeMax='+tomorrow_str+'T22:00:00-05:00',
+            'url': 'https://www.googleapis.com/calendar/v3/calendars/hc.dining@gmail.com/events?key=+'+process.env.calKey+'+&timeMin='+today_str+'T06:00:00-05:00&timeMax='+tomorrow_str+'T01:00:00-05:00',
             'headers': {
             }
         };
@@ -98,6 +98,19 @@ exports.getDaysMenus = (request, response) => {
         to_json = {}
         for (const [key,value] of Object.entries(final_results)){
             to_json[key] = cleanString(value["description"]);
+        }
+
+        if ("Brunch" in to_json) {
+            send_json = {
+                "Brunch": to_json["Brunch"],
+                "Dinner": to_json["Dinner"],
+            }
+        } else {
+            send_json = {
+                "Breakfast": to_json["Breakfast"],
+                "Lunch": to_json["Lunch"],
+                "Dinner": to_json["Dinner"]
+            }
         }
 
         return response.json(to_json);
