@@ -1,81 +1,106 @@
 //products.js
-
 const { db } = require('../util/admin');
+require('dotenv').config({ path: '.env' });
+const make_request = require('request');
+const util = require('util');
+
+function checkAndAdd(final_results, meal, item){
+    if (item["summary"] == meal.toUpperCase()) {
+        if (meal in final_results){
+            // witch updated is newer
+            if (Date.parse(final_results[meal]["updated"]) < Date.parse(item["updated"])) {
+                final_results[meal] = item;
+            }
+        } else {
+            final_results[meal] = item;
+        }
+    }
+}
+
+function cleanString(my_string) {
+    if (my_string[0] == '<') {
+        // rule for everything between <br><br>
+        var myRegexp = new RegExp("<br><br>(.|\s)+<br><br>", "g");
+        var match = myRegexp.exec(my_string);
+    } else {
+        var myRegexp = new RegExp("(.|\s)+<br><br>", "g");
+        var match = myRegexp.exec(my_string);
+    }
+
+    var make_list = match[0].replace(/[ ]*(<br>|\*|\&nbsp\;|\&amp\;)[ ]*/g, ",");
+    make_list = make_list.replace(/[ ]*V[^a-zA-Z]/g, " ");
+    make_list = make_list.replace(/[ ]*\*[^a-zA-Z]/g, " ");
+    
+    make_list = make_list.split(',');
+
+    var filtered = make_list.filter(function (el) {
+        return el != "";
+    });
+
+    return filtered;
+
+}
 
 exports.getDaysMenus = (request, response) => {
     const dayNum = request.params.dayNum;
 	
     const asyncWrapper = async (dayNum) => {
+
+        var d = new Date();
+        var day = d.getDay(),
+        diff = d.getDate() - day + (day == 0 ? -6:1); // adjust when day is sunday
+        var monday = new Date(d.setDate(diff));
         
-        // TODO: Add method to pull info
-        weekend_day = {"Brunch": [
-            "Blueberry Muffins",
-            "Blueberry Muffins",
-            "Selection of Scones",
-            "Buttermilk Biscuits",
-            "Scrambles Eggs",
-            "Sliced Potatoes",
-            "French Toast",
-            "Hickory Smoked Bacon ",
-            "Turkey Sausage Links",
-            "Vegan Sausage",
-            "Tofu Scramble",
-            "Mexican Breakfast Casserole ",
-        ], "Dinner": [
-            "Asian BBQ Chicken",
-            "Pineapple Pico De Gallo Spiced Tofu",
-            "Chees Ravioli with Roasted Tomatoes & Rosa Sauce",
-            "Roasted Potato Medley",
-            "Roasted Brussel Sprouts",
-            "Seasoned Baby Carrots",
-            "Grilled Chicken Breast ",
-            "Sundae Bar",
-        ]}
+        var today = new Date();
+        today.setDate(monday.getDate() + (dayNum - 1))
+        var dd = String(today.getDate()).padStart(2, '0');
+        var mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
+        var yyyy = today.getFullYear();
+        
+        var today_str = yyyy + '-' + mm + '-' + dd;
 
-        normal_day = {"Breakfast": [
-            "Corn Muffins",
-            "Corn Muffins",
-            "Sausage, Egg & Cheese Bagel",
-            "Egg & Cheese Bagel",
-            "Scrambled Eggs",
-            "Tater Tots",
-            "Berry Pancakes",
-            "Turkey Bacon",
-            "Pork Sausage Patty",
-            "Vegan Sausage",
-            "Tofu Scramble",
-        ], "Lunch": [
-            "Vegan Jambalaya Soup ",
-            "Chicken Parmesan",
-            "Kale Potato Enchilada Bake",
-            "Roasted Balsamic Marinated Portabella Mushrooms",
-            "Spaghetti with Fire Roasted Marinara Sauce",
-            "Broccoli Florets",
-            "Cobb Salad",
-            "Selection of Cookies",
-            "Oatmeal Carrot Cookies",
-        ], "Dinner": [
-            "Shrimp Fajitas",
-            "Tofu Fajitas",
-            "Cilantro Lime Rice",
-            "Ratatouille",
-            "Roasted Local Button Mushrooms",
-            "Grilled Chicken Breast ",
-            "Chocolate Sponge Cake ",
-            "Oreo Rice Krispy Treats",
-        ]}
+        var tomorrow = new Date();
+        tomorrow.setDate(today.getDate() + 1)
+        var dd = String(tomorrow.getDate()).padStart(2, '0');
+        var mm = String(tomorrow.getMonth() + 1).padStart(2, '0'); //January is 0!
+        var yyyy = tomorrow.getFullYear();
 
-        temp_meal_list = [
-            weekend_day,
-            normal_day,
-            normal_day,
-            normal_day,
-            normal_day,
-            normal_day,
-            weekend_day
-        ]
+        var tomorrow_str = yyyy + '-' + mm + '-' + dd;
 
-        return response.json(temp_meal_list[dayNum]);
+        const requestPromise = util.promisify(make_request);
+
+        var options = {
+            'method': 'GET',
+            'url': 'https://www.googleapis.com/calendar/v3/calendars/hc.dining@gmail.com/events?key=+'+process.env.calKey+'+&timeMin='+today_str+'T06:00:00-05:00&timeMax='+tomorrow_str+'T22:00:00-05:00',
+            'headers': {
+            }
+        };
+        const my_response = await requestPromise(options);
+
+        final_results = {}
+
+        JSON.parse(my_response.body)["items"].forEach(function (item, index) {
+            if (dayNum == 7 || dayNum == 0) {
+                // find brunch
+                checkAndAdd(final_results, "Brunch", item);
+
+            } else {
+                // breakfast and lunch
+                checkAndAdd(final_results, "Breakfast", item);
+
+                checkAndAdd(final_results, "Lunch", item);
+            }
+
+            // find dinner
+            checkAndAdd(final_results, "Dinner", item);
+        })
+
+        to_json = {}
+        for (const [key,value] of Object.entries(final_results)){
+            to_json[key] = cleanString(value["description"]);
+        }
+
+        return response.json(to_json);
     }
 
     asyncWrapper(dayNum);
