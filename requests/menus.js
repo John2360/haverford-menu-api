@@ -5,7 +5,7 @@ const make_request = require('request');
 const util = require('util');
 
 function checkAndAdd(final_results, meal, item){
-    if (item["summary"] == meal.toUpperCase()) {
+    if (item["summary"].toUpperCase().replace(' ', '').includes(meal.toUpperCase())) {
         if (meal in final_results){
             // witch updated is newer
             if (Date.parse(final_results[meal]["updated"]) < Date.parse(item["updated"])) {
@@ -34,7 +34,7 @@ function cleanString(my_string) {
     make_list = make_list.split(',');
 
     var filtered = make_list.filter(function (el) {
-        return el != "";
+        return (el != "" && el != " ");
     });
 
     return filtered;
@@ -59,19 +59,11 @@ exports.getDaysMenus = (request, response) => {
         
         var today_str = yyyy + '-' + mm + '-' + dd;
 
-        var tomorrow = new Date();
-        tomorrow.setDate(today.getDate() + 1)
-        var dd = String(tomorrow.getDate()).padStart(2, '0');
-        var mm = String(tomorrow.getMonth() + 1).padStart(2, '0'); //January is 0!
-        var yyyy = tomorrow.getFullYear();
-
-        var tomorrow_str = yyyy + '-' + mm + '-' + dd;
-
         const requestPromise = util.promisify(make_request);
 
         var options = {
             'method': 'GET',
-            'url': 'https://www.googleapis.com/calendar/v3/calendars/hc.dining@gmail.com/events?key=+'+process.env.calKey+'+&timeMin='+today_str+'T06:00:00-05:00&timeMax='+tomorrow_str+'T01:00:00-05:00',
+            'url': 'https://www.googleapis.com/calendar/v3/calendars/hc.dining@gmail.com/events?key=+'+process.env.calKey+'+&timeMin='+today_str+'T06:00:00-05:00&timeMax='+today_str+'T22:00:00-05:00&singleEvents=true',
             'headers': {
             }
         };
@@ -80,7 +72,7 @@ exports.getDaysMenus = (request, response) => {
         final_results = {}
 
         JSON.parse(my_response.body)["items"].forEach(function (item, index) {
-            if (dayNum == 7 || dayNum == 0) {
+            if (dayNum == 6 || dayNum == 0) {
                 // find brunch
                 checkAndAdd(final_results, "Brunch", item);
 
@@ -95,25 +87,26 @@ exports.getDaysMenus = (request, response) => {
             checkAndAdd(final_results, "Dinner", item);
         })
 
-        to_json = {}
-        for (const [key,value] of Object.entries(final_results)){
+        var to_json = {};
+        for (const [key, value] of Object.entries(final_results)){
             to_json[key] = cleanString(value["description"]);
         }
 
+        var final_json = {};
         if ("Brunch" in to_json) {
-            send_json = {
+            final_json = {
                 "Brunch": to_json["Brunch"],
-                "Dinner": to_json["Dinner"],
+                "Dinner": to_json["Dinner"]
             }
         } else {
-            send_json = {
+            final_json = {
                 "Breakfast": to_json["Breakfast"],
                 "Lunch": to_json["Lunch"],
                 "Dinner": to_json["Dinner"]
             }
         }
 
-        return response.json(to_json);
+        return response.json(final_json);
     }
 
     asyncWrapper(dayNum);
