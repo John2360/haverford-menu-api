@@ -27,7 +27,7 @@ function cleanString(my_string) {
         var match = myRegexp.exec(my_string);
     }
 
-    var make_list = match[0].replace(/[ ]*(<br>|\*|\&nbsp\;|\&amp\;)[ ]*/g, ",");
+    var make_list = match[0].replace(/[ ]*(<br>|\*|\&nbsp\;|<[^>]*>|\&amp\;)[ ]*/g, ",");
     make_list = make_list.replace(/[ ]*V[^a-zA-Z]/g, " ");
     make_list = make_list.replace(/[ ]*\*[^a-zA-Z]/g, " ");
     
