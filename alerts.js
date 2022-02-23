@@ -31,7 +31,7 @@ async function getActiveTokens() {
 
         if (item.data().active == true) {
 
-            if (item.data().hasOwnProperty(expoToken)) {
+            if (item.data().hasOwnProperty("expoToken")) {
                 tokens.push(item.data().expoToken);
             }
 
@@ -66,7 +66,7 @@ async function sendPush(tokens, title, body) {
 
 }
 
-const job = schedule.scheduleJob('* * * * *', function(){
+function main(){
 
     var now = new Date();
     var minute = now.getMinutes();
@@ -90,7 +90,8 @@ const job = schedule.scheduleJob('* * * * *', function(){
             title = "Lunch";
         }
 
-        if (hour == 17 && minute == 0) {
+        //hour == 17 && minute == 00
+        if (true) {
             // Send dinner
             title = "Dinner";
         }
@@ -141,4 +142,8 @@ const job = schedule.scheduleJob('* * * * *', function(){
         })
 
     }
+}
+
+const job = schedule.scheduleJob('* * * * *', function(){
+    main();
 });
