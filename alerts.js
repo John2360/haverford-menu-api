@@ -90,8 +90,7 @@ function main(){
             title = "Lunch";
         }
 
-        //hour == 17 && minute == 00
-        if (true) {
+        if (hour == 17 && minute == 00) {
             // Send dinner
             title = "Dinner";
         }
