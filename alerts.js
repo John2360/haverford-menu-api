@@ -69,6 +69,7 @@ async function sendPush(tokens, title, body) {
 function main(){
 
     var now = new Date();
+    now = now.toLocaleString("en-US", {timeZone: "America/New_York"});
     var minute = now.getMinutes();
     var hour = now.getHours();
     var day = now.getDay();
