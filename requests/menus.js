@@ -82,7 +82,7 @@ exports.getDaysMenus = (request, response) => {
         
         // brute force selected day
         var selected_day = new Date();
-        while (selected_day.getDay() != dayNum){
+        while (selected_day.getDay() != dayNum && dayNum < 7){
             selected_day.setDate(selected_day.getDate() + 1);
         }
         
