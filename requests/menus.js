@@ -1,34 +1,55 @@
-//products.js
 const { db } = require('../util/admin');
 require('dotenv').config({ path: '.env' });
 const make_request = require('request');
 const util = require('util');
 
-function checkAndAdd(final_results, meal, item){
-    if (item["summary"].toUpperCase().replace(' ', '').includes(meal.toUpperCase())) {
-        if (meal in final_results){
-            // witch updated is newer
-            if (Date.parse(final_results[meal]["updated"]) < Date.parse(item["updated"])) {
-                final_results[meal] = item;
-            }
-        } else {
-            final_results[meal] = item;
-        }
+function checkAndAdd(final_results, item){
+    if (!item["summary"].toUpperCase().replace(/\s/g, '').includes("COOPDAILYMENU".toUpperCase())) {
+        new_summary = item["summary"][0].toUpperCase() + item["summary"].substring(1).toLowerCase();
+        final_results[new_summary] = item;
     }
 }
 
 function cleanString(my_string) {
-    if (my_string[0] == '<') {
-        // rule for everything between <br><br>
-        var myRegexp = new RegExp("<br><br>(.|\s)+<br><br>", "g");
-        var match = myRegexp.exec(my_string);
-    } else {
-        var myRegexp = new RegExp("(.|\s)+<br><br>", "g");
-        var match = myRegexp.exec(my_string);
+    // try to remove i, b, u tags and *s
+    try {
+        my_reg = /(<\/* *span\/* *\/*>|<\/* *u\/* *\/*>|<\/* *b\/* *\/*>|<\/* *i *\/*>|\*)/g
+        my_string = my_string.replace(my_reg, "");
+    } catch(error) {
+        console.log("Failed to match <i>, <b>, and <u> tags "+ error);
     }
 
-    var make_list = match[0].replace(/[ ]*(<br>|\*|\&nbsp\;|<[^>]*>|\&amp\;)[ ]*/g, ",");
-    make_list = make_list.replace(/[ ]*V[^a-zA-Z]/g, " ");
+    try {
+        my_string = my_string.replace(/(&nbsp;)/g, ' ');
+        my_string = my_string.replace(/(&amp;)/g, ' ');
+        my_string = my_string.replace(/\n/g, "<br />");
+    } catch (error) {
+        console.log("Failed to replace &nbsp; with ' '  "+ error);
+
+    }
+
+    try {
+        // rule for everything between <br><br>
+        var myRegexp = new RegExp("<br *\/*><br *\/*>(.|\s)+<br *\/*><br *\/*>", "g");
+        var match = myRegexp.exec(my_string);
+        match = match[0];
+    } catch (error) {
+        try {
+            // everything after <br><br>
+            var myRegexp = new RegExp("<br *\/*><br *\/*>(.|\s)+", "g");
+            var match = myRegexp.exec(my_string);
+            match = match[0];
+        } catch (error) {
+            // everything between newlines
+            var myRegexp = new RegExp("\\n\\n(.|\s)+", "g");
+            var match = myRegexp.exec(my_string);
+            console.log(match);
+            match = match[0];
+        }
+    }
+
+    var make_list = match.replace(/[ ]*(<br *\/*>|\*|<[^>]*>|\&amp\;)[ ]*/g, ",");
+    make_list = make_list.replace(/[ ]*V[^a-zA-Z]/g, ",");
     make_list = make_list.replace(/[ ]*\*[^a-zA-Z]/g, " ");
     
     make_list = make_list.split(',');
@@ -37,7 +58,20 @@ function cleanString(my_string) {
         return (el != "" && el != " ");
     });
 
-    return filtered;
+    var item_list_final = []
+    var filtered = filtered.forEach((item) => {
+        
+        // remove weird spacing
+        my_string = item.trim();
+        my_string = my_string.replace(/\s+/g, " ");
+
+        // check if exists
+        if (!(item_list_final.includes(my_string))) {
+            item_list_final.push(my_string);
+        }
+    })
+
+    return item_list_final;
 
 }
 
@@ -45,20 +79,25 @@ exports.getDaysMenus = (request, response) => {
     const dayNum = request.params.dayNum;
 	
     const asyncWrapper = async (dayNum) => {
-
-        var d = new Date();
-        var day = d.getDay(),
-        diff = d.getDate() - day + (day == 0 ? -6:1); // adjust when day is sunday
-        var monday = new Date(d.setDate(diff));
         
-        var today = new Date();
-        today.setDate(monday.getDate() + (dayNum - 1))
-        var dd = String(today.getDate()).padStart(2, '0');
-        var mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
-        var yyyy = today.getFullYear();
+        // brute force selected day
+        var selected_day = new Date();
+        while (selected_day.getDay() != dayNum){
+            selected_day.setDate(selected_day.getDate() + 1);
+        }
+        
+        var dd = String(selected_day.getDate()).padStart(2, '0');
+        var mm = String(selected_day.getMonth() + 1).padStart(2, '0'); //January is 0!
+        var yyyy = selected_day.getFullYear();
         
         var today_str = yyyy + '-' + mm + '-' + dd;
+        
+        // debug
+        // console.log(today_str);
+        // var today_str = "2022-05-03";
+        // var today_str = request.query.debug;
 
+        // make async menu call
         const requestPromise = util.promisify(make_request);
 
         var options = {
@@ -69,44 +108,28 @@ exports.getDaysMenus = (request, response) => {
         };
         const my_response = await requestPromise(options);
 
+        // get days menu
         final_results = {}
-
         JSON.parse(my_response.body)["items"].forEach(function (item, index) {
-            if (dayNum == 6 || dayNum == 0) {
-                // find brunch
-                checkAndAdd(final_results, "Brunch", item);
-
-            } else {
-                // breakfast and lunch
-                checkAndAdd(final_results, "Breakfast", item);
-
-                checkAndAdd(final_results, "Lunch", item);
-            }
-
-            // find dinner
-            checkAndAdd(final_results, "Dinner", item);
+            // add everything but coop menu
+            checkAndAdd(final_results, item);
         })
 
-        var to_json = {};
+        // create meal item lists and parse times
+        var to_json = [];
         for (const [key, value] of Object.entries(final_results)){
-            to_json[key] = cleanString(value["description"]);
+            to_json.push([key.trim(), cleanString(value["description"]), Date.parse(value["start"]["dateTime"])]);
         }
 
-        var final_json = {};
-        if ("Brunch" in to_json) {
-            final_json = {
-                "Brunch": to_json["Brunch"],
-                "Dinner": to_json["Dinner"]
-            }
-        } else {
-            final_json = {
-                "Breakfast": to_json["Breakfast"],
-                "Lunch": to_json["Lunch"],
-                "Dinner": to_json["Dinner"]
-            }
-        }
+        // sort to correct meal order
+        to_json.sort((a, b) => a[2] - b[2])
+        
+        // pop datetime
+        to_json.forEach((item, index) => {
+            to_json[index].pop();
+        })
 
-        return response.json(final_json);
+        return response.json(to_json);
     }
 
     asyncWrapper(dayNum);
