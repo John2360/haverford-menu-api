@@ -1,7 +1,16 @@
 //index.js
+require('dotenv').config()
+var http = require('http');
+var https = require('https');
 
+// get certs
+var privateKey  = process.env.privKey;
+var certificate = process.env.pubKey;
+
+var credentials = {key: privateKey, cert: certificate};
+var express = require('express');
+var app = express();
 var cors = require('cors');
-const app = require('express')();
 app.use(require('express').json());
 app.use(cors());
 
@@ -29,6 +38,8 @@ app.post('/notifications/send', sendNotification);
 
 const port = 3000;
 
-app.listen(port, () => {
-    console.log(`API on http://localhost:${port}`)
-})
+var httpServer = http.createServer(app);
+var httpsServer = https.createServer(credentials, app);
+
+httpServer.listen(port);
+httpsServer.listen(8443);
