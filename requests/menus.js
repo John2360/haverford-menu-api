@@ -1,7 +1,7 @@
 const { db } = require('../util/admin');
 require('dotenv').config({ path: '.env' });
-const make_request = require('request');
-const util = require('util');
+const fetch = require('node-fetch');
+
 
 function checkAndAdd(final_results, item){
     if (!item["summary"].toUpperCase().replace(/\s/g, '').includes("COOPDAILYMENU".toUpperCase())) {
@@ -97,15 +97,8 @@ exports.getDaysMenus = async(request, response) => {
         // var today_str = request.query.debug;
 
         // make async menu call
-        const requestPromise = util.promisify(make_request);
-
-        var options = {
-            'method': 'GET',
-            'url': 'https://www.googleapis.com/calendar/v3/calendars/hc.dining@gmail.com/events?key=+'+process.env.calKey+'+&timeMin='+today_str+'T06:00:00-05:00&timeMax='+today_str+'T22:00:00-05:00&singleEvents=true',
-            'headers': {
-            }
-        };
-        const my_response = await requestPromise(options);
+        const my_call = await fetch('https://www.googleapis.com/calendar/v3/calendars/hc.dining@gmail.com/events?key=+'+process.env.calKey+'+&timeMin='+today_str+'T06:00:00-05:00&timeMax='+today_str+'T22:00:00-05:00&singleEvents=true')
+        const my_response = await my_call.json();
 
         // get days menu
         final_results = {}
