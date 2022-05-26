@@ -130,6 +130,6 @@ exports.getDaysMenus = async(request, response) => {
 
         return response.json(to_json);
     } catch (error) {
-        console.log(error);
+        console.log("getDaysMenus "+error);
     }
 }

@@ -8,7 +8,7 @@ exports.updateToken = async(request, response) => {
         await db.collection("notification-tokens").doc(uid).update({expoToken: expo_token});
         return response.json({"status": "success"});
     } catch (error) {
-        console.log(error);
+        console.log("updateToken "+error);
     }
 }
 
@@ -32,7 +32,7 @@ exports.getNotifications = async(request, response) => {
             return response.json({"status": null});
         }
     } catch (error) {
-        console.log(error);
+        console.log("getNotifications "+error);
     }
 }
 
@@ -47,6 +47,6 @@ exports.updateNotifications = async(request, response) => {
 
         return response.json(resp);
     } catch (error) {
-        console.log(error);
+        console.log("updateNotifications "+error);
     }
 }
