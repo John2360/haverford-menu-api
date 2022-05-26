@@ -5,7 +5,7 @@ exports.updateToken = async(request, response) => {
         const uid = request.body.uid;
         const expo_token = request.body.expoToken;
 
-        await db.collection("notification-tokens").doc(uid).update({expoToken: expo_token});
+        await db.collection("notification-tokens").doc(uid).set({expoToken: expo_token}, {merge: true});
         return response.json({"status": "success"});
     } catch (error) {
         console.log("updateToken "+error);
