@@ -97,8 +97,14 @@ exports.getDaysMenus = async(request, response) => {
         // var today_str = request.query.debug;
 
         // make async menu call
-        const my_call = await fetch('https://www.googleapis.com/calendar/v3/calendars/hc.dining@gmail.com/events?key=+'+process.env.calKey+'+&timeMin='+today_str+'T06:00:00-05:00&timeMax='+today_str+'T22:00:00-05:00&singleEvents=true')
-        const my_response = await my_call.json();
+        let my_response = null;
+        try {
+            const my_call = await fetch('https://www.googleapis.com/calendar/v3/calendars/hc.dining@gmail.com/events?key=+'+process.env.calKey+'+&timeMin='+today_str+'T06:00:00-05:00&timeMax='+today_str+'T22:00:00-05:00&singleEvents=true')
+            my_response = await my_call.json();
+        } catch (error) {
+            const my_call = await fetch('https://www.googleapis.com/calendar/v3/calendars/hc.dining@gmail.com/events?key=+'+process.env.calKey+'+&timeMin='+today_str+'T06:00:00-05:00&timeMax='+today_str+'T22:00:00-05:00&singleEvents=true')
+            my_response = await my_call.json();
+        }
 
         // get days menu
         final_results = {}
