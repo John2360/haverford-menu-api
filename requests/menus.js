@@ -102,7 +102,7 @@ exports.getDaysMenus = async(request, response) => {
 
         // get days menu
         final_results = {}
-        JSON.parse(my_response.body)["items"].forEach(function (item, index) {
+        my_response["items"].forEach(function (item, index) {
             // add everything but coop menu
             checkAndAdd(final_results, item);
         })
