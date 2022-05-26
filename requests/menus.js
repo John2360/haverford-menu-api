@@ -76,56 +76,60 @@ function cleanString(my_string) {
 }
 
 exports.getDaysMenus = async(request, response) => {
-    const dayNum = request.params.dayNum;
-        
-    // brute force selected day
-    var selected_day = new Date();
-    while (selected_day.getDay() != dayNum && dayNum < 7){
-        selected_day.setDate(selected_day.getDate() + 1);
-    }
-    
-    var dd = String(selected_day.getDate()).padStart(2, '0');
-    var mm = String(selected_day.getMonth() + 1).padStart(2, '0'); //January is 0!
-    var yyyy = selected_day.getFullYear();
-    
-    var today_str = yyyy + '-' + mm + '-' + dd;
-    
-    // debug
-    // console.log(today_str);
-    // var today_str = "2022-05-03";
-    // var today_str = request.query.debug;
-
-    // make async menu call
-    const requestPromise = util.promisify(make_request);
-
-    var options = {
-        'method': 'GET',
-        'url': 'https://www.googleapis.com/calendar/v3/calendars/hc.dining@gmail.com/events?key=+'+process.env.calKey+'+&timeMin='+today_str+'T06:00:00-05:00&timeMax='+today_str+'T22:00:00-05:00&singleEvents=true',
-        'headers': {
+    try {
+        const dayNum = request.params.dayNum;
+            
+        // brute force selected day
+        var selected_day = new Date();
+        while (selected_day.getDay() != dayNum && dayNum < 7){
+            selected_day.setDate(selected_day.getDate() + 1);
         }
-    };
-    const my_response = await requestPromise(options);
+        
+        var dd = String(selected_day.getDate()).padStart(2, '0');
+        var mm = String(selected_day.getMonth() + 1).padStart(2, '0'); //January is 0!
+        var yyyy = selected_day.getFullYear();
+        
+        var today_str = yyyy + '-' + mm + '-' + dd;
+        
+        // debug
+        // console.log(today_str);
+        // var today_str = "2022-05-03";
+        // var today_str = request.query.debug;
 
-    // get days menu
-    final_results = {}
-    JSON.parse(my_response.body)["items"].forEach(function (item, index) {
-        // add everything but coop menu
-        checkAndAdd(final_results, item);
-    })
+        // make async menu call
+        const requestPromise = util.promisify(make_request);
 
-    // create meal item lists and parse times
-    var to_json = [];
-    for (const [key, value] of Object.entries(final_results)){
-        to_json.push([key.trim(), cleanString(value["description"]), Date.parse(value["start"]["dateTime"])]);
+        var options = {
+            'method': 'GET',
+            'url': 'https://www.googleapis.com/calendar/v3/calendars/hc.dining@gmail.com/events?key=+'+process.env.calKey+'+&timeMin='+today_str+'T06:00:00-05:00&timeMax='+today_str+'T22:00:00-05:00&singleEvents=true',
+            'headers': {
+            }
+        };
+        const my_response = await requestPromise(options);
+
+        // get days menu
+        final_results = {}
+        JSON.parse(my_response.body)["items"].forEach(function (item, index) {
+            // add everything but coop menu
+            checkAndAdd(final_results, item);
+        })
+
+        // create meal item lists and parse times
+        var to_json = [];
+        for (const [key, value] of Object.entries(final_results)){
+            to_json.push([key.trim(), cleanString(value["description"]), Date.parse(value["start"]["dateTime"])]);
+        }
+
+        // sort to correct meal order
+        to_json.sort((a, b) => a[2] - b[2])
+        
+        // pop datetime
+        to_json.forEach((item, index) => {
+            to_json[index].pop();
+        })
+
+        return response.json(to_json);
+    } catch (error) {
+        console.log(error);
     }
-
-    // sort to correct meal order
-    to_json.sort((a, b) => a[2] - b[2])
-    
-    // pop datetime
-    to_json.forEach((item, index) => {
-        to_json[index].pop();
-    })
-
-    return response.json(to_json);
 }

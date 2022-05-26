@@ -3,6 +3,8 @@ const { db } = require('../util/admin');
 const request_mod = require('request');
 
 exports.sendNotification = async(request, response) => {
+
+  try {
     const token = request.body.token;
     const title = request.body.title;
     const body = request.body.body;
@@ -25,4 +27,8 @@ exports.sendNotification = async(request, response) => {
         if (error) throw new Error(error);
         return response.json(res.body);
       });
+
+  } catch (error) {
+    console.log(error);
+  }
 }
